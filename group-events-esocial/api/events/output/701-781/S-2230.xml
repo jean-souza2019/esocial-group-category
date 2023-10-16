@@ -1,0 +1,91 @@
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+  <s:Body>
+    <ConsultarLoteEventosResponse
+      xmlns="http://www.esocial.gov.br/servicos/empregador/lote/eventos/envio/consulta/retornoProcessamento/v1_1_0">
+      <ConsultarLoteEventosResult>
+        <eSocial
+          xmlns="http://www.esocial.gov.br/schema/lote/eventos/envio/retornoProcessamento/v1_3_0"
+          xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+          <retornoProcessamentoLoteEventos>
+            <ideEmpregador>
+              <tpInsc>2</tpInsc>
+              <nrInsc>99871386087</nrInsc>
+            </ideEmpregador>
+            <ideTransmissor>
+              <tpInsc>2</tpInsc>
+              <nrInsc>0199871386087637591039</nrInsc>
+            </ideTransmissor>
+            <status>
+              <cdResposta>201</cdResposta>
+              <descResposta>Lote processado com sucesso.</descResposta>
+            </status>
+            <dadosRecepcaoLote>
+              <dhRecepcao>2019-05-02T17:08:20.183</dhRecepcao>
+              <versaoAplicativoRecepcao>0.1.0-A0352</versaoAplicativoRecepcao>
+              <protocoloEnvio>1.1.201905.0000000000484483260</protocoloEnvio>
+            </dadosRecepcaoLote>
+            <dadosProcessamentoLote>
+              <versaoAplicativoProcessamentoLote>1.0.0.0</versaoAplicativoProcessamentoLote>
+            </dadosProcessamentoLote>
+            <retornoEventos>
+              <evento Id="ID2016375910390002019050217073300002">
+                <retornoEvento>
+                  <eSocial xmlns="http://www.esocial.gov.br/schema/evt/retornoEvento/v1_2_1">
+                    <retornoEvento Id="ID2016375910390002019050217073300002">
+                      <ideEmpregador>
+                        <tpInsc>2</tpInsc>
+                        <nrInsc>01637591039</nrInsc>
+                      </ideEmpregador>
+                      <recepcao>
+                        <tpAmb>1</tpAmb>
+                        <dhRecepcao>2019-05-02T17:08:20.183</dhRecepcao>
+                        <versaoAppRecepcao>0.1.0-A0352</versaoAppRecepcao>
+                        <protocoloEnvioLote>1.1.201905.0000000000484483260</protocoloEnvioLote>
+                      </recepcao>
+                      <processamento>
+                        <cdResposta>201</cdResposta>
+                        <descResposta>Sucesso.</descResposta>
+                        <versaoAppProcessamento>12.0.0-A4183</versaoAppProcessamento>
+                        <dhProcessamento>2019-05-02T17:08:20.447</dhProcessamento>
+                      </processamento>
+                      <recibo>
+                        <nrRecibo>1.1.0000000004290497187</nrRecibo>
+                        <hash>KUrx1H79ERFCeXPRE/++wIsLz1rsQJdSlZW1Zrms820=</hash>
+                      </recibo>
+                    </retornoEvento>
+                    <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+                      <SignedInfo>
+                        <CanonicalizationMethod
+                          Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+                        <SignatureMethod
+                          Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" />
+                        <Reference URI="">
+                          <Transforms>
+                            <Transform
+                              Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" />
+                            <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" />
+                          </Transforms>
+                          <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" />
+                          <DigestValue>qCOP5lVHC7AVZM3Vs8ZcWBTjo4sYGYW1Wn08NnTDtoc=</DigestValue>
+                        </Reference>
+                      </SignedInfo>
+                      <SignatureValue>
+                        ORXa5NiyFN9aRCQtTFztCeZkDVHCnBDdxnSzo2m9SBbMaWenjrywE55P4yR5zt8DnlIRlcPybnlhgEd1lL+20tQj2Bh9q44XoIGB10jNbbla17msDbBSmxQ7yQIdoLZklZdyzyzOeNlEoZbWfthCFI6OIpUCRdq4D+8qv0DOsM9bkq8xYsNnEB3ICcyf8wsyFvHruWpW8QTPuWxNOgfn9esdbr0hX2gWjd81ScSIH+ClV+P6TRFs6CjziQ7LIxMABXtcvMX68YbpwD6hGsfQ9Si9S64EtmQ8AUMfcATencVL9o3r4e5fiMmTdekpjqCxZfzOFIeHHEaLnxnpkoqlfQ==</SignatureValue>
+                      <KeyInfo>
+                        <X509Data>
+                          <X509Certificate>
+                            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</X509Certificate>
+                        </X509Data>
+                      </KeyInfo>
+                    </Signature>
+                  </eSocial>
+                </retornoEvento>
+              </evento>
+            </retornoEventos>
+          </retornoProcessamentoLoteEventos>
+        </eSocial>
+      </ConsultarLoteEventosResult>
+    </ConsultarLoteEventosResponse>
+  </s:Body>
+</s:Envelope>
