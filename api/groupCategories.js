@@ -147,6 +147,16 @@ module.exports = async function groupCategories(inputDir, outputDir) {
                   secondFilePath,
                   resolve(directorySended, secondFile)
                 );
+                console.log(
+                  `------- Second File!: ${secondFile} moved to ${secondFilePath} -------`
+                );
+              } else {
+                console.log(
+                  `------- Second File!: ${secondFile} is not moved -  match cpf? ${matchCpf(
+                    event,
+                    secondEvent
+                  )} -------`
+                );
               }
             }
 
