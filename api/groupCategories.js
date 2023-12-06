@@ -4,10 +4,9 @@ const xml2js = require("xml2js");
 
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
-module.exports = async function groupCategories(
-  inputDirEvents,
-  outputDirEvents
-) {
+module.exports = async function groupCategories(inputDir, outputDir) {
+  const inputDirEvents = resolve(inputDir);
+  const outputDirEvents = resolve(outputDir);
   const moveFile = async (inputDir, outputDir) => {
     try {
       await fs.rename(inputDir, outputDir);
@@ -116,7 +115,14 @@ module.exports = async function groupCategories(
           const event = JSON.parse(jsonXmlFile);
 
           if (isAdmission(event)) {
+            console.log(`------- File is admission!: ${file} -------`);
             const category = findCategory(event);
+            console.log(
+              `------- File: ${file}  category: ${JSON.stringify(
+                category
+              )}-------`
+            );
+
             const directorySended = returnDirToCategory(category);
 
             const secondFiles = await fs.readdir(inputDirEvents);
@@ -145,12 +151,20 @@ module.exports = async function groupCategories(
             }
 
             await moveFile(filePath, resolve(directorySended, file));
+
+            console.log(
+              `------- File admission moved to output path!: ${file} -------`
+            );
+          } else {
+            console.log(`------- File is not admission!: ${file} -------`);
           }
 
           console.log(`------- FINISH VALIDATE FILE: ${file} -------`);
         } catch (error) {
           console.log(error);
         }
+      } else {
+        console.log(`this file ${file} is not accesible`);
       }
     }
   } catch (error) {
