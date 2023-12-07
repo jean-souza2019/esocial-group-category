@@ -78,7 +78,9 @@ module.exports = async function groupCategories(inputDir, outputDir) {
 
   const matchCpf = (event, secondEvent) => {
     const cpfEvent = searchAtributeValue(event, "cpfTrab");
-    const cpfSecondEvent = searchAtributeValue(secondEvent, "cpfTrab");
+    const cpfSecondEvent =
+      searchAtributeValue(secondEvent, "cpfTrab") ??
+      searchAtributeValue(secondEvent, "cpfBenef");
     const inscSecondEvent = searchAtributeValue(secondEvent, "nrInsc");
 
     if (cpfSecondEvent !== undefined && cpfSecondEvent == cpfEvent) {
