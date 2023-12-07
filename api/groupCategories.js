@@ -46,11 +46,21 @@ module.exports = async function groupCategories(inputDir, outputDir) {
   });
 
   const findCategory = (event) => {
-    return event?.eSocial?.evtAdmissao?.vinculo?.infoContrato?.codCateg ?? null;
+    return (
+      event?.eSocial?.evtAdmissao?.vinculo?.infoContrato?.codCateg ??
+      event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial?.evtAdmissao
+        ?.vinculo?.infoContrato?.codCateg ??
+      null
+    );
   };
 
   const isAdmission = (event) => {
-    return event?.eSocial?.evtAdmissao ? true : false;
+    return event?.eSocial?.evtAdmissao
+      ? true
+      : event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial
+          ?.evtAdmissao
+      ? true
+      : false;
   };
 
   const returnDirToCategory = (category) => {
