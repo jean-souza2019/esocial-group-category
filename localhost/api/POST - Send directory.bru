@@ -1,0 +1,18 @@
+meta {
+  name: POST - Send directory
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{3333}}/run
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "inputDir": "/Users/jeanmarcos/Downloads/_projects/_outhers/events/input",
+    "outputDir": "/Users/jeanmarcos/Downloads/_projects/_outhers/events/output"
+  }
+}

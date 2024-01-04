@@ -1,6 +1,7 @@
 const fs = require("node:fs").promises;
 const { resolve } = require("node:path");
 const xml2js = require("xml2js");
+const logger = require("./shared/logger");
 
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
@@ -12,7 +13,7 @@ module.exports = async function groupCategories(
     try {
       await fs.rename(inputDir, outputDir);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -32,19 +33,17 @@ module.exports = async function groupCategories(
         await fs.mkdir(directory, { recursive: true });
       }
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     }
   };
 
-  console.log(`#-#-#-#-#-#-# INITIAL PROCESS GROUP BY CATEGORY #-#-#-#-#-#-#`);
+  logger.info(`#-#-#-#-#-#-# INICIO DO PROCESSO #-#-#-#-#-#-#`);
 
-  [
+  await Promise.all([
     resolve(outputDirEvents, "101-103"),
     resolve(outputDirEvents, "701-781"),
     resolve(outputDirEvents, "901"),
-  ].forEach(async (directory) => {
-    await createDirectoryIfNotExists(directory);
-  });
+  ].map(createDirectoryIfNotExists));
 
   const findCategory = (event) => {
     return event?.eSocial?.evtAdmissao?.vinculo?.infoContrato?.codCateg ?? null;
@@ -95,67 +94,46 @@ module.exports = async function groupCategories(
 
   try {
     const files = await fs.readdir(inputDirEvents);
+    const fileData = [];
 
     for (const file of files) {
       const filePath = resolve(inputDirEvents, file);
-
       if (await validateFileDir(filePath)) {
-        console.log(`------- START PROCCESS FILE: ${file} -------`);
-
-        try {
-          const xml = await fs.readFile(filePath, "utf-8");
-          let jsonXmlFile;
-          parser.parseString(xml, (err, result) => {
-            if (err) {
-              console.error(err);
-              return;
-            }
-            jsonXmlFile = JSON.stringify(result, null, 2);
-          });
-
-          const event = JSON.parse(jsonXmlFile);
-
-          if (isAdmission(event)) {
-            const category = findCategory(event);
-            const directorySended = returnDirToCategory(category);
-
-            const secondFiles = await fs.readdir(inputDirEvents);
-
-            for (const secondFile of secondFiles) {
-              const secondFilePath = resolve(inputDirEvents, secondFile);
-              const secondXml = await fs.readFile(secondFilePath, "utf-8");
-
-              let jsonSecondXmlFile;
-              parser.parseString(secondXml, (err, result) => {
-                if (err) {
-                  console.error(err);
-                  return;
-                }
-                jsonSecondXmlFile = JSON.stringify(result, null, 2);
-              });
-
-              const secondEvent = JSON.parse(jsonSecondXmlFile);
-
-              if (!isAdmission(secondEvent) && matchCpf(event, secondEvent)) {
-                await moveFile(
-                  secondFilePath,
-                  resolve(directorySended, secondFile)
-                );
-              }
-            }
-
-            await moveFile(filePath, resolve(directorySended, file));
-          }
-
-          console.log(`------- FINISH VALIDATE FILE: ${file} -------`);
-        } catch (error) {
-          console.log(error);
-        }
+        logger.info(`------- INICIANDO LEITURA ARQUIVO: ${file} -------`);
+        const xml = await fs.readFile(filePath, "utf-8");
+        const event = await parser.parseString(xml);
+        fileData.push({ file, filePath, event });
       }
     }
+
+    for (const { file, filePath, event } of fileData) {
+      if (isAdmission(event)) {
+        logger.info(`------- ARQUIVO: ${file} É ADMISSAO! -------`);
+        const category = findCategory(event);
+        const directorySended = returnDirToCategory(category);
+
+        logger.info(
+          `------- ARQUIVO: ${file} CATEGORIA: ${category}  DIRETÓRIO CATEGORIA: ${directorySended} -------`
+        );
+
+        const movePromises = fileData
+          .filter(
+            ({ event: secondEvent }) =>
+              !isAdmission(secondEvent) && matchCpf(event, secondEvent)
+          )
+          .map(({ filePath: secondFilePath, file: secondFile }) =>
+            moveFile(secondFilePath, resolve(directorySended, secondFile))
+          );
+
+        await Promise.all(movePromises);
+        await moveFile(filePath, resolve(directorySended, file));
+      }
+
+      logger.info(`------- FINALIZADO VALIDAÇÃO DO ARQUIVO: ${file} -------`);
+    }
   } catch (error) {
-    console.error(error);
+    logger.error(error);
   }
 
-  console.log(`#-#-#-#-#-#-# FINISH PROCESS GROUP BY CATEGORY #-#-#-#-#-#-#`);
+  logger.info(`#-#-#-#-#-#-# FIM DO PROCESSO #-#-#-#-#-#-#`);
 };
