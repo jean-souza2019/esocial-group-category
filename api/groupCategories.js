@@ -37,6 +37,9 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     }
   };
 
+  logger.info(
+    `----------------------------------------------------------------------------------------------------`
+  );
   logger.info(`#-#-#-#-#-#-# INICIO DO PROCESSO #-#-#-#-#-#-#`);
 
   await Promise.all(
@@ -113,7 +116,18 @@ module.exports = async function groupCategories(inputDir, outputDir) {
       const filePath = resolve(inputDirEvents, file);
       if (await validateFileDir(filePath)) {
         const xml = await fs.readFile(filePath, "utf-8");
-        const event = await parser.parseString(xml);
+
+        let jsonXmlFile;
+        parser.parseString(xml, (err, result) => {
+          if (err) {
+            console.error(err);
+            return;
+          }
+          jsonXmlFile = JSON.stringify(result, null, 2);
+        });
+
+        const event = JSON.parse(jsonXmlFile);
+
         fileContents.set(file, event);
       }
     });
@@ -140,6 +154,7 @@ module.exports = async function groupCategories(inputDir, outputDir) {
           logger.info(
             `------- SEGUNDO ARQUIVO: ${secondFile} MOVIDO PARA ${directorySended} -------`
           );
+          fileContents.delete(secondFile);
         }
       }
 
@@ -150,6 +165,7 @@ module.exports = async function groupCategories(inputDir, outputDir) {
       logger.info(
         `------- ARQUIVO ADMISSAO: ${file} FOI MOVIDO PARA A PASTA DE SAIDA -------`
       );
+      fileContents.delete(file);
     }
   } catch (error) {
     logger.error(`ERRO AO AGRUPAR CATEGORIAS:`, error);
