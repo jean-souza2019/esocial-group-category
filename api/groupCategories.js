@@ -2,6 +2,7 @@ const fs = require("node:fs").promises;
 const { resolve } = require("node:path");
 const xml2js = require("xml2js");
 const async = require("async");
+const logger = require("./shared/logger");
 
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
@@ -13,7 +14,7 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     try {
       await fs.rename(inputDir, outputDir);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     }
   };
 
@@ -32,11 +33,11 @@ module.exports = async function groupCategories(inputDir, outputDir) {
         await fs.mkdir(directory, { recursive: true });
       }
     } catch (err) {
-      console.error(err);
+      logger.error(err);
     }
   };
 
-  console.log(`#-#-#-#-#-#-# INITIAL PROCESS GROUP BY CATEGORY #-#-#-#-#-#-#`);
+  logger.info(`#-#-#-#-#-#-# INICIO DO PROCESSO #-#-#-#-#-#-#`);
 
   await Promise.all(
     ["101-103", "701-781", "901"].map((dir) =>
@@ -107,6 +108,7 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     const files = await fs.readdir(inputDirEvents);
     const fileContents = new Map();
 
+    // Aplicando async.mapLimit
     await async.mapLimit(files, 5, async (file) => {
       const filePath = resolve(inputDirEvents, file);
       if (await validateFileDir(filePath)) {
@@ -117,10 +119,10 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     });
 
     for (const [file, event] of fileContents) {
-      console.log(`------- START PROCESS FILE: ${file} -------`);
+      logger.info(`------- INICIOU PROCESSO NO ARQUIVO: ${file} -------`);
 
       if (!isAdmission(event)) {
-        console.log(`------- File is not admission!: ${file} -------`);
+        logger.info(`------- O ARQUIVO: ${file} NÃO É ADMISSÃO -------`);
         continue;
       }
 
@@ -135,8 +137,8 @@ module.exports = async function groupCategories(inputDir, outputDir) {
             resolve(inputDirEvents, secondFile),
             resolve(directorySended, secondFile)
           );
-          console.log(
-            `------- Second File!: ${secondFile} moved to ${directorySended} -------`
+          logger.info(
+            `------- SEGUNDO ARQUIVO: ${secondFile} MOVIDO PARA ${directorySended} -------`
           );
         }
       }
@@ -145,13 +147,13 @@ module.exports = async function groupCategories(inputDir, outputDir) {
         resolve(inputDirEvents, file),
         resolve(directorySended, file)
       );
-      console.log(
-        `------- File admission moved to output path!: ${file} -------`
+      logger.info(
+        `------- ARQUIVO ADMISSAO: ${file} FOI MOVIDO PARA A PASTA DE SAIDA -------`
       );
     }
   } catch (error) {
-    console.error(`Error in groupCategories:`, error);
+    logger.error(`ERRO AO AGRUPAR CATEGORIAS:`, error);
   }
 
-  console.log(`#-#-#-#-#-#-# FINISH PROCESS GROUP BY CATEGORY #-#-#-#-#-#-#`);
+  logger.info(`#-#-#-#-#-#-# FIM DO PROCESSO #-#-#-#-#-#-#`);
 };
