@@ -4,10 +4,9 @@ const xml2js = require("xml2js");
 
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
-module.exports = async function groupCategories(
-  inputDirEvents,
-  outputDirEvents
-) {
+module.exports = async function groupCategories(inputDir, outputDir) {
+  const inputDirEvents = resolve(inputDir);
+  const outputDirEvents = resolve(outputDir);
   const moveFile = async (inputDir, outputDir) => {
     try {
       await fs.rename(inputDir, outputDir);
@@ -47,11 +46,21 @@ module.exports = async function groupCategories(
   });
 
   const findCategory = (event) => {
-    return event?.eSocial?.evtAdmissao?.vinculo?.infoContrato?.codCateg ?? null;
+    return (
+      event?.eSocial?.evtAdmissao?.vinculo?.infoContrato?.codCateg ??
+      event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial?.evtAdmissao
+        ?.vinculo?.infoContrato?.codCateg ??
+      null
+    );
   };
 
   const isAdmission = (event) => {
-    return event?.eSocial?.evtAdmissao ? true : false;
+    return event?.eSocial?.evtAdmissao
+      ? true
+      : event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial
+          ?.evtAdmissao
+      ? true
+      : false;
   };
 
   const returnDirToCategory = (category) => {
@@ -69,7 +78,9 @@ module.exports = async function groupCategories(
 
   const matchCpf = (event, secondEvent) => {
     const cpfEvent = searchAtributeValue(event, "cpfTrab");
-    const cpfSecondEvent = searchAtributeValue(secondEvent, "cpfTrab");
+    const cpfSecondEvent =
+      searchAtributeValue(secondEvent, "cpfTrab") ??
+      searchAtributeValue(secondEvent, "cpfBenef");
     const inscSecondEvent = searchAtributeValue(secondEvent, "nrInsc");
 
     if (cpfSecondEvent !== undefined && cpfSecondEvent == cpfEvent) {
@@ -116,7 +127,14 @@ module.exports = async function groupCategories(
           const event = JSON.parse(jsonXmlFile);
 
           if (isAdmission(event)) {
+            console.log(`------- File is admission!: ${file} -------`);
             const category = findCategory(event);
+            console.log(
+              `------- File: ${file}  category: ${JSON.stringify(
+                category
+              )}-------`
+            );
+
             const directorySended = returnDirToCategory(category);
 
             const secondFiles = await fs.readdir(inputDirEvents);
@@ -141,16 +159,34 @@ module.exports = async function groupCategories(
                   secondFilePath,
                   resolve(directorySended, secondFile)
                 );
+                console.log(
+                  `------- Second File!: ${secondFile} moved to ${secondFilePath} -------`
+                );
+              } else {
+                console.log(
+                  `------- Second File!: ${secondFile} is not moved -  match cpf? ${matchCpf(
+                    event,
+                    secondEvent
+                  )} -------`
+                );
               }
             }
 
             await moveFile(filePath, resolve(directorySended, file));
+
+            console.log(
+              `------- File admission moved to output path!: ${file} -------`
+            );
+          } else {
+            console.log(`------- File is not admission!: ${file} -------`);
           }
 
           console.log(`------- FINISH VALIDATE FILE: ${file} -------`);
         } catch (error) {
           console.log(error);
         }
+      } else {
+        console.log(`this file ${file} is not accesible`);
       }
     }
   } catch (error) {
