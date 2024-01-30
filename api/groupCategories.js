@@ -7,7 +7,6 @@ const logger = require("./shared/logger");
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
 module.exports = async function groupCategories(inputDir, outputDir) {
-  console.time('process')
   const inputDirEvents = resolve(inputDir);
   const outputDirEvents = resolve(outputDir);
 
@@ -182,5 +181,4 @@ module.exports = async function groupCategories(inputDir, outputDir) {
   }
 
   logger.info(`#-#-#-#-#-#-# FIM DO PROCESSO #-#-#-#-#-#-#`);
-  console.timeEnd('process')
 };
