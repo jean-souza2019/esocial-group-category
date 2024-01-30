@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "runner": "node api/server.js",
+    "runner": "node --max-old-space-size=8192 api/server.js",
     "start:display": "electron main.js"
   },
   "keywords": [],

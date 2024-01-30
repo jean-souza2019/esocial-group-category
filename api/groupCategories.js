@@ -7,6 +7,7 @@ const logger = require("./shared/logger");
 const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 
 module.exports = async function groupCategories(inputDir, outputDir) {
+  console.time('process')
   const inputDirEvents = resolve(inputDir);
   const outputDirEvents = resolve(outputDir);
 
@@ -61,9 +62,9 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     return event?.eSocial?.evtAdmissao
       ? true
       : event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial
-          ?.evtAdmissao
-      ? true
-      : false;
+        ?.evtAdmissao
+        ? true
+        : false;
   };
 
   const returnDirToCategory = (category) => {
@@ -79,17 +80,11 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     }
   };
 
-  const matchCpf = (event, secondEvent) => {
-    const cpfEvent = searchAtributeValue(event, "cpfTrab");
-    const cpfSecondEvent =
-      searchAtributeValue(secondEvent, "cpfTrab") ??
-      searchAtributeValue(secondEvent, "cpfBenef");
-    const inscSecondEvent = searchAtributeValue(secondEvent, "nrInsc");
-
+  const matchCpf = (cpfEvent, cpfSecondEvent, subscriptionSecondEvent) => {
     if (cpfSecondEvent !== undefined && cpfSecondEvent == cpfEvent) {
       return true;
     } else {
-      if (inscSecondEvent !== undefined && inscSecondEvent == cpfEvent) {
+      if (subscriptionSecondEvent !== undefined && subscriptionSecondEvent == cpfEvent) {
         return true;
       }
     }
@@ -110,9 +105,9 @@ module.exports = async function groupCategories(inputDir, outputDir) {
   try {
     const files = await fs.readdir(inputDirEvents);
     const fileContents = new Map();
+    const fileAdmissionContents = new Map();
 
-    // Aplicando async.mapLimit
-    await async.mapLimit(files, 5, async (file) => {
+    await async.mapLimit(files, 10, async (file) => {
       const filePath = resolve(inputDirEvents, file);
       if (await validateFileDir(filePath)) {
         const xml = await fs.readFile(filePath, "utf-8");
@@ -127,26 +122,41 @@ module.exports = async function groupCategories(inputDir, outputDir) {
         });
 
         const event = JSON.parse(jsonXmlFile);
+        const category = findCategory(event)
+        const isAddmissionEvent = isAdmission(event)
+        const newEvent = {
+          category,
+          isAddmissionEvent
+        }
 
-        fileContents.set(file, event);
+        if (isAddmissionEvent) {
+          const cpfEvent = searchAtributeValue(event, "cpfTrab");
+          newEvent.cpfEvent = cpfEvent;
+
+          fileAdmissionContents.set(file, newEvent);
+          logger.info(`------- O ARQUIVO: ${file} É ADMISSÃO -------`);
+        } else {
+          const cpfEvent =
+            searchAtributeValue(event, "cpfTrab") ??
+            searchAtributeValue(event, "cpfBenef");
+          const subscriptionEvent = searchAtributeValue(event, "nrInsc");
+
+          newEvent.cpfEvent = cpfEvent;
+          newEvent.subscriptionEvent = subscriptionEvent;
+
+          fileContents.set(file, newEvent);
+          logger.info(`------- O ARQUIVO: ${file} NÃO É ADMISSÃO -------`);
+        }
       }
     });
 
-    for (const [file, event] of fileContents) {
+    for (const [file, event] of fileAdmissionContents) {
       logger.info(`------- INICIOU PROCESSO NO ARQUIVO: ${file} -------`);
 
-      if (!isAdmission(event)) {
-        logger.info(`------- O ARQUIVO: ${file} NÃO É ADMISSÃO -------`);
-        continue;
-      }
-
-      const category = findCategory(event);
-      const directorySended = returnDirToCategory(category);
+      const directorySended = returnDirToCategory(event.category);
 
       for (const [secondFile, secondEvent] of fileContents) {
-        if (file === secondFile) continue;
-
-        if (!isAdmission(secondEvent) && matchCpf(event, secondEvent)) {
+        if (matchCpf(event.cpfEvent, secondEvent.cpfEvent, secondEvent.subscriptionEvent)) {
           await moveFile(
             resolve(inputDirEvents, secondFile),
             resolve(directorySended, secondFile)
@@ -165,11 +175,12 @@ module.exports = async function groupCategories(inputDir, outputDir) {
       logger.info(
         `------- ARQUIVO ADMISSAO: ${file} FOI MOVIDO PARA A PASTA DE SAIDA -------`
       );
-      fileContents.delete(file);
+      fileAdmissionContents.delete(file);
     }
   } catch (error) {
     logger.error(`ERRO AO AGRUPAR CATEGORIAS:`, error);
   }
 
   logger.info(`#-#-#-#-#-#-# FIM DO PROCESSO #-#-#-#-#-#-#`);
+  console.timeEnd('process')
 };
