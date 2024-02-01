@@ -1,20 +1,26 @@
 const { createLogger, format, transports } = require("winston");
-const { combine, timestamp, label, json } = format;
+const { combine, json } = format;
+
+const timestamp = () =>
+  new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+
+const customTimestamp = format((info, opts) => {
+  info.timestamp = timestamp();
+  return info;
+});
+
 
 const path = require("path");
 
 const logDir = "api/logs";
 
-const ignoreErrors = format((info, opts) => {
-  if (info.level === "error") {
-    return false;
-  }
-  return info;
-});
+const ignoreErrors = format((info, _) =>
+  info.level === "error" ? false : info
+);
 
 const logger = createLogger({
   level: "info",
-  format: combine(timestamp(), json()),
+  format: combine(customTimestamp(), json()),
   transports: [
     new transports.File({
       filename: path.join(logDir, "error.log"),

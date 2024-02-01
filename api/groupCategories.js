@@ -9,7 +9,7 @@ const parser = new xml2js.Parser({ explicitArray: false, mergeAttrs: true });
 module.exports = async function groupCategories(inputDir, outputDir) {
   const inputDirEvents = resolve(inputDir);
   const outputDirEvents = resolve(outputDir);
-
+  
   const moveFile = async (inputDir, outputDir) => {
     try {
       await fs.rename(inputDir, outputDir);
@@ -48,7 +48,16 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     )
   );
 
-  const findCategory = (event) => {
+  const findCategory = (event, typeEvent) => {
+    if (typeEvent === '2300') {
+      return (
+        event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial
+          ?.evtTSVInicio?.infoTSVInicio?.codCateg ??
+        event?.eSocial?.retornoProcessamentoDownload?.recibo?.eSocial
+          ?.retornoEvento?.recibo?.contrato?.infoContrato?.codCateg ??
+        null
+      );
+    }
     return (
       event?.eSocial?.evtAdmissao?.vinculo?.infoContrato?.codCateg ??
       event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial?.evtAdmissao
@@ -61,9 +70,18 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     return event?.eSocial?.evtAdmissao
       ? true
       : event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial
-        ?.evtAdmissao
-        ? true
-        : false;
+          ?.evtAdmissao
+      ? true
+      : false;
+  };
+
+  const is2300 = (event) => {
+    return event?.eSocial?.evtTSVInicio
+      ? true
+      : event?.eSocial?.retornoProcessamentoDownload?.evento?.eSocial
+          ?.evtTSVInicio
+      ? true
+      : false;
   };
 
   const returnDirToCategory = (category) => {
@@ -83,7 +101,10 @@ module.exports = async function groupCategories(inputDir, outputDir) {
     if (cpfSecondEvent !== undefined && cpfSecondEvent == cpfEvent) {
       return true;
     } else {
-      if (subscriptionSecondEvent !== undefined && subscriptionSecondEvent == cpfEvent) {
+      if (
+        subscriptionSecondEvent !== undefined &&
+        subscriptionSecondEvent == cpfEvent
+      ) {
         return true;
       }
     }
@@ -104,9 +125,11 @@ module.exports = async function groupCategories(inputDir, outputDir) {
   try {
     const files = await fs.readdir(inputDirEvents);
     const fileContents = new Map();
-    const fileAdmissionContents = new Map();
+    const fileAdmission2300Contents = new Map();
+    let fileLength = 0;
+    let fileReadingLength = 0;
 
-    await async.mapLimit(files, 10, async (file) => {
+    await async.mapLimit(files, 20, async (file) => {
       const filePath = resolve(inputDirEvents, file);
       if (await validateFileDir(filePath)) {
         const xml = await fs.readFile(filePath, "utf-8");
@@ -121,19 +144,22 @@ module.exports = async function groupCategories(inputDir, outputDir) {
         });
 
         const event = JSON.parse(jsonXmlFile);
-        const category = findCategory(event)
-        const isAddmissionEvent = isAdmission(event)
+        const isAddmissionEvent = isAdmission(event);
+        const is2300Event = is2300(event);
+        const typeEvent = isAddmissionEvent ? 'admissao' : is2300Event ? '2300' : null 
+        const category = findCategory(event, typeEvent);
         const newEvent = {
           category,
-          isAddmissionEvent
-        }
+          isAddmissionEvent,
+          is2300Event,
+        };
 
-        if (isAddmissionEvent) {
+        if (isAddmissionEvent || is2300Event) {
           const cpfEvent = searchAtributeValue(event, "cpfTrab");
           newEvent.cpfEvent = cpfEvent;
 
-          fileAdmissionContents.set(file, newEvent);
-          logger.info(`------- O ARQUIVO: ${file} É ADMISSÃO -------`);
+          fileAdmission2300Contents.set(file, newEvent);
+          // logger.info(`------- O ARQUIVO: ${file} É ${isAddmissionEvent ? 'ADMISSÃO' : '2300'} -------`);
         } else {
           const cpfEvent =
             searchAtributeValue(event, "cpfTrab") ??
@@ -144,37 +170,57 @@ module.exports = async function groupCategories(inputDir, outputDir) {
           newEvent.subscriptionEvent = subscriptionEvent;
 
           fileContents.set(file, newEvent);
-          logger.info(`------- O ARQUIVO: ${file} NÃO É ADMISSÃO -------`);
+          // logger.info(`------- O ARQUIVO: ${file} NÃO É ADMISSÃO -------`);
         }
+
+        fileLength += 1;
+        logger.info(
+          `******* LEITURA TOTAL DE ARQUIVOS: ${fileLength} *******`
+        );
       }
     });
 
-    for (const [file, event] of fileAdmissionContents) {
-      logger.info(`------- INICIOU PROCESSO NO ARQUIVO: ${file} -------`);
+    for (const [fileName, event] of fileAdmission2300Contents) {
+      // logger.info(`------- INICIOU PROCESSO NO ARQUIVO: ${file} -------`);
 
       const directorySended = returnDirToCategory(event.category);
+      
+      fileReadingLength += 1;
 
-      for (const [secondFile, secondEvent] of fileContents) {
-        if (matchCpf(event.cpfEvent, secondEvent.cpfEvent, secondEvent.subscriptionEvent)) {
-          await moveFile(
-            resolve(inputDirEvents, secondFile),
-            resolve(directorySended, secondFile)
-          );
-          logger.info(
-            `------- SEGUNDO ARQUIVO: ${secondFile} MOVIDO PARA ${directorySended} -------`
-          );
-          fileContents.delete(secondFile);
+      if (event.isAddmissionEvent) {
+        for (const [secondFileName, secondEvent] of fileContents) {
+          if (
+            matchCpf(
+              event.cpfEvent,
+              secondEvent.cpfEvent,
+              secondEvent.subscriptionEvent
+            )
+          ) {
+            await moveFile(
+              resolve(inputDirEvents, secondFileName),
+              resolve(directorySended, secondFileName)
+            );
+            // logger.info(
+            //   `------- SEGUNDO ARQUIVO: ${secondFile} MOVIDO PARA ${directorySended} -------`
+            // );
+            fileContents.delete(secondFileName);
+            fileReadingLength += 1;
+          }
         }
       }
 
       await moveFile(
-        resolve(inputDirEvents, file),
-        resolve(directorySended, file)
+        resolve(inputDirEvents, fileName),
+        resolve(directorySended, fileName)
       );
+      // logger.info(
+      //   `------- ARQUIVO ${event.isAddmissionEvent ? 'ADMISSÃO' : '2300'}: ${file} FOI MOVIDO PARA A PASTA DE SAIDA -------`
+      // );
+      fileAdmission2300Contents.delete(fileName);
+
       logger.info(
-        `------- ARQUIVO ADMISSAO: ${file} FOI MOVIDO PARA A PASTA DE SAIDA -------`
+        `******* PROCESSAMENTO TOTAL DE ARQUIVOS: ${fileReadingLength} *******`
       );
-      fileAdmissionContents.delete(file);
     }
   } catch (error) {
     logger.error(`ERRO AO AGRUPAR CATEGORIAS:`, error);
